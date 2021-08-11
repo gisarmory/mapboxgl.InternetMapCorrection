@@ -1,7 +1,13 @@
 import {lonLatToTileNumbers, tileNumbersToLonLat, gcj02_To_gps84, gps84_To_gcj02} from './lib/coordConver.js'
 import {setOptions, template} from './lib/Util.js'
+import WebMercatorViewport from 'viewport-mercator-project';
+import { getDistanceScales, zoomToScale } from './lib/web-mercator.js';
+
+import * as mat4 from 'gl-matrix/mat4';
+import * as vec4 from 'gl-matrix/vec4';
 
 export default class gcj02TileLayer{
+
 
     constructor(layerId, url, options){
         this.id = layerId;
@@ -54,8 +60,59 @@ export default class gcj02TileLayer{
             "attribute vec2 a_pos;" +
             "attribute vec2 a_TextCoord;" +
             "varying vec2 v_TextCoord;" +
+
+            //经纬度转墨卡托，墨卡托采用距离中心的差值，这样可以避免因为精度丢失造成的抖动
+            "const float TILE_SIZE = 512.0;" +
+            "const float PI = 3.1415926536;" +
+            "const float WORLD_SCALE = TILE_SIZE / (PI * 2.0);" +
+
+            "uniform float u_project_scale;" +
+            "uniform bool u_is_offset;" +
+            "uniform vec3 u_pixels_per_degree;" +
+            "uniform vec3 u_pixels_per_degree2;" +
+            "uniform vec3 u_pixels_per_meter;" +
+            "uniform vec2 u_viewport_center;" +
+            "uniform vec4 u_viewport_center_projection;" +
+            "uniform vec2 u_viewport_size;" +
+            "float project_scale(float meters) {" +
+            "    return meters * u_pixels_per_meter.z;" +
+            "}" +
+            "vec3 project_scale(vec3 position) {" +
+            "    return position * u_pixels_per_meter;" +
+            "}" +
+            "vec2 project_mercator(vec2 lnglat) {" +
+            "    float x = lnglat.x;" +
+            "    return vec2(" +
+            "    radians(x) + PI, PI - log(tan(PI * 0.25 + radians(lnglat.y) * 0.5))" +
+            "    );" +
+            "}" +
+            "vec4 project_offset(vec4 offset) {" +
+            "    float dy = offset.y;" +
+            "    dy = clamp(dy, -1., 1.);" +
+            "    vec3 pixels_per_unit = u_pixels_per_degree + u_pixels_per_degree2 * dy;" +
+            "    return vec4(offset.xyz * pixels_per_unit, offset.w);" +
+            "}" +
+            "vec4 project_position(vec4 position) {" +
+            "    if (u_is_offset) {" +
+            "        float X = position.x - u_viewport_center.x;" +
+            "        float Y = position.y - u_viewport_center.y;" +
+            "        return project_offset(vec4(X, Y, position.z, position.w));" +
+            "    }" +
+            "    else {" +
+            "        return vec4(" +
+            "        project_mercator(position.xy) * WORLD_SCALE * u_project_scale, project_scale(position.z), position.w" +
+            "        );" +
+            "    }" +
+            "}" +
+            "vec4 project_to_clipping_space(vec3 position) {" +
+            "    vec4 project_pos = project_position(vec4(position, 1.0));" +
+            "    return u_matrix * project_pos + u_viewport_center_projection;" +
+            "}" +
+
             "void main() {" +
-            "   gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0);" +
+            // "   gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0);" +
+            "   vec4 project_pos = project_position(vec4(a_pos, 0.0, 1.0));" +
+            "   gl_Position = u_matrix * project_pos + u_viewport_center_projection;" +
             "   v_TextCoord = a_TextCoord;" +
             "}";
 
@@ -185,21 +242,35 @@ export default class gcj02TileLayer{
         };
 
         //瓦片编号转经纬度，并进行偏移
-        var tLeftTop = this.gridCache[this.createTileKey(xyz)]
-        var tRightTop = this.gridCache[this.createTileKey(xyz.x+1, xyz.y, xyz.z)] 
-        var tLeftBottom = this.gridCache[this.createTileKey(xyz.x, xyz.y+1, xyz.z)]  
-        var tRightBottom = this.gridCache[this.createTileKey(xyz.x+1, xyz.y+1, xyz.z)]  
-        //设置图形顶点坐标
-        var leftTop = mapboxgl.MercatorCoordinate.fromLngLat(tLeftTop);
-        var rightTop = mapboxgl.MercatorCoordinate.fromLngLat(tRightTop);
-        var leftBottom = mapboxgl.MercatorCoordinate.fromLngLat(tLeftBottom);
-        var rightBottom = mapboxgl.MercatorCoordinate.fromLngLat(tRightBottom);
+        // var tLeftTop = this.gridCache[this.createTileKey(xyz)]
+        // var tRightTop = this.gridCache[this.createTileKey(xyz.x+1, xyz.y, xyz.z)] 
+        // var tLeftBottom = this.gridCache[this.createTileKey(xyz.x, xyz.y+1, xyz.z)]  
+        // var tRightBottom = this.gridCache[this.createTileKey(xyz.x+1, xyz.y+1, xyz.z)]  
+        // //设置图形顶点坐标
+        // var leftTop = mapboxgl.MercatorCoordinate.fromLngLat(tLeftTop);
+        // var rightTop = mapboxgl.MercatorCoordinate.fromLngLat(tRightTop);
+        // var leftBottom = mapboxgl.MercatorCoordinate.fromLngLat(tLeftBottom);
+        // var rightBottom = mapboxgl.MercatorCoordinate.fromLngLat(tRightBottom);
+        //顶点坐标+纹理坐标
+        // var attrData = new Float32Array([
+        //     leftTop.x, leftTop.y, 0.0, 1.0,
+        //     leftBottom.x, leftBottom.y, 0.0, 0.0,
+        //     rightTop.x, rightTop.y, 1.0, 1.0,
+        //     rightBottom.x, rightBottom.y, 1.0, 0.0
+        // ])
+        
+        // //瓦片编号转经纬度，并进行偏移
+        var leftTop = this.gridCache[this.createTileKey(xyz)]
+        var rightTop = this.gridCache[this.createTileKey(xyz.x+1, xyz.y, xyz.z)] 
+        var leftBottom = this.gridCache[this.createTileKey(xyz.x, xyz.y+1, xyz.z)]  
+        var rightBottom = this.gridCache[this.createTileKey(xyz.x+1, xyz.y+1, xyz.z)]  
+
         //顶点坐标+纹理坐标
         var attrData = new Float32Array([
-            leftTop.x, leftTop.y, 0.0, 1.0,
-            leftBottom.x, leftBottom.y, 0.0, 0.0,
-            rightTop.x, rightTop.y, 1.0, 1.0,
-            rightBottom.x, rightBottom.y, 1.0, 0.0
+            leftTop.lng, leftTop.lat, 0.0, 1.0,
+            leftBottom.lng, leftBottom.lat, 0.0, 0.0,
+            rightTop.lng, rightTop.lat, 1.0, 1.0,
+            rightBottom.lng, rightBottom.lat, 1.0, 0.0
         ])
         var FSIZE = attrData.BYTES_PER_ELEMENT;
         //创建缓冲区并传入数据
@@ -252,7 +323,6 @@ export default class gcj02TileLayer{
         if(this.map.getZoom() < this.options.minZoom || this.map.getZoom() > this.options.maxZoom) return
 
         //记录变换矩阵，用于瓦片加载后主动绘制
-        //这里有个mapboxgl的bug，就是matrix的精度不够，会导致在大比例尺下（17、18级最明显）出现瓦片抖动的情况
         this.matrix = matrix;
 
         //应用着色程序
@@ -285,7 +355,8 @@ export default class gcj02TileLayer{
             gl.enableVertexAttribArray(this.a_TextCoord);
 
             //给位置变换矩阵赋值
-            gl.uniformMatrix4fv(gl.getUniformLocation(this.program, "u_matrix"), false, matrix);
+            // gl.uniformMatrix4fv(gl.getUniformLocation(this.program, "u_matrix"), false, matrix);
+            this.frame(gl)
 
             //开启阿尔法混合，实现注记半透明效果
             gl.enable(gl.BLEND);
@@ -296,5 +367,93 @@ export default class gcj02TileLayer{
         }
 
     }
+
+    frame(gl) {
+        const currentZoomLevel = this.map.getZoom();
+        const bearing = this.map.getBearing();
+        const pitch = this.map.getPitch();
+        const center = this.map.getCenter();
+
+        const viewport = new WebMercatorViewport({
+            // width: gl.drawingBufferWidth / 2,
+            // height: gl.drawingBufferHeight / 2,
+            width: gl.drawingBufferWidth*1.11,
+            height: gl.drawingBufferHeight*1.11,
+            longitude: center.lng,
+            latitude: center.lat,
+            zoom: currentZoomLevel,
+            pitch,
+            bearing,
+        });
+
+        // @ts-ignore
+        const { viewProjectionMatrix, projectionMatrix, viewMatrix, viewMatrixUncentered } = viewport;
+
+        let drawParams = {
+            // @ts-ignore
+            'u_matrix': viewProjectionMatrix,
+            'u_point_size': this.pointSize,
+            'u_is_offset': false,
+            'u_pixels_per_degree': [0, 0, 0],
+            'u_pixels_per_degree2': [0, 0, 0],
+            'u_viewport_center': [0, 0],
+            'u_pixels_per_meter': [0, 0, 0],
+            'u_project_scale': zoomToScale(currentZoomLevel),
+            'u_viewport_center_projection': [0, 0, 0, 0],
+        };
+
+        if (currentZoomLevel > 12) {
+            // const newMatrix: Array<number> = [];
+
+            const { pixelsPerDegree, pixelsPerDegree2 } = getDistanceScales({
+                longitude: center.lng,
+                latitude: center.lat,
+                zoom: currentZoomLevel,
+                highPrecision: true
+            });
+            
+            const positionPixels = viewport.projectFlat(
+                [ Math.fround(center.lng), Math.fround(center.lat) ],
+                Math.pow(2, currentZoomLevel)
+            );
+
+            const projectionCenter = vec4.transformMat4(
+                [],
+                [positionPixels[0], positionPixels[1], 0.0, 1.0],
+                viewProjectionMatrix
+            );
+
+            // Always apply uncentered projection matrix if available (shader adds center)
+            let viewMatrix2 = viewMatrixUncentered || viewMatrix;
+
+            // Zero out 4th coordinate ("after" model matrix) - avoids further translations
+            // viewMatrix = new Matrix4(viewMatrixUncentered || viewMatrix)
+            //   .multiplyRight(VECTOR_TO_POINT_MATRIX);
+            let viewProjectionMatrix2 = mat4.multiply([], projectionMatrix, viewMatrix2);
+            const VECTOR_TO_POINT_MATRIX = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+            viewProjectionMatrix2 = mat4.multiply([], viewProjectionMatrix2, VECTOR_TO_POINT_MATRIX);
+
+            drawParams['u_matrix'] = viewProjectionMatrix2;
+            drawParams['u_is_offset'] = true;
+            drawParams['u_viewport_center'] = [Math.fround(center.lng), Math.fround(center.lat)];
+            // @ts-ignore
+            drawParams['u_viewport_center_projection'] = projectionCenter;
+            drawParams['u_pixels_per_degree'] = pixelsPerDegree && pixelsPerDegree.map(p => Math.fround(p));
+            drawParams['u_pixels_per_degree2'] = pixelsPerDegree2 && pixelsPerDegree2.map(p => Math.fround(p));
+        }
+
+
+        gl.uniformMatrix4fv(gl.getUniformLocation(this.program, "u_matrix"), false, drawParams['u_matrix']);
+
+        gl.uniform1f(gl.getUniformLocation(this.program, "u_project_scale"), drawParams['u_project_scale']);
+        gl.uniform1i(gl.getUniformLocation(this.program, "u_is_offset"), drawParams['u_is_offset']?1:0); 
+        gl.uniform3fv(gl.getUniformLocation(this.program, "u_pixels_per_degree"), drawParams['u_pixels_per_degree']);
+        gl.uniform3fv(gl.getUniformLocation(this.program, "u_pixels_per_degree2"), drawParams['u_pixels_per_degree2']);
+        gl.uniform3fv(gl.getUniformLocation(this.program, "u_pixels_per_meter"), drawParams['u_pixels_per_meter']);
+        gl.uniform2fv(gl.getUniformLocation(this.program, "u_viewport_center"), drawParams['u_viewport_center']);
+        gl.uniform4fv(gl.getUniformLocation(this.program, "u_viewport_center_projection"), drawParams['u_viewport_center_projection']);
+        
+    }
+
 
 }
