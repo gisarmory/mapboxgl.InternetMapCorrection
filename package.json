@@ -11,15 +11,28 @@
     "rollup-plugin-json": "^3.1.0",
     "rollup-plugin-node-resolve": "^3.0.0",
     "rollup-watch": "^4.3.1",
-    "uglify-es": "^3.3.9"
+    "uglify-es": "^3.3.9",
+    "eslint": "^6.7.2",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "lint-staged": "^9.5.0"
   },
   "scripts": {
     "dev": "rollup -w -c rollup-config.js",
-    "build": "rollup -c rollup-config.js",
-    "build2": "uglifyjs dist/-src.js -c -m -o dist/gjc02TileLayer.js"
+    "build": "rollup -c rollup-config.js"
   },
   "dependencies": {
     "viewport-mercator-project": "^6.1.1",
     "gl-matrix": "^3.0.0"
+  },
+  "gitHooks": {
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.{js}": [
+      "git add"
+    ]
   }
 }

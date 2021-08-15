@@ -55,13 +55,13 @@ export default class gcj02TileLayer{
     onAdd(map, gl) {
         this.map = map;
 
+        // 参考：https://github.com/xiaoiver/custom-mapbox-layer/blob/master/src/shaders/project.glsl
         var vertexSource = "" +
             "uniform mat4 u_matrix;" +
             "attribute vec2 a_pos;" +
             "attribute vec2 a_TextCoord;" +
             "varying vec2 v_TextCoord;" +
 
-            //经纬度转墨卡托，墨卡托采用距离中心的差值，这样可以避免因为精度丢失造成的抖动
             "const float TILE_SIZE = 512.0;" +
             "const float PI = 3.1415926536;" +
             "const float WORLD_SCALE = TILE_SIZE / (PI * 2.0);" +
@@ -110,7 +110,6 @@ export default class gcj02TileLayer{
             "}" +
 
             "void main() {" +
-            // "   gl_Position = u_matrix * vec4(a_pos, 0.0, 1.0);" +
             "   vec4 project_pos = project_position(vec4(a_pos, 0.0, 1.0));" +
             "   gl_Position = u_matrix * project_pos + u_viewport_center_projection;" +
             "   v_TextCoord = a_TextCoord;" +
@@ -241,25 +240,8 @@ export default class gcj02TileLayer{
             xyz:xyz
         };
 
-        //瓦片编号转经纬度，并进行偏移
-        // var tLeftTop = this.gridCache[this.createTileKey(xyz)]
-        // var tRightTop = this.gridCache[this.createTileKey(xyz.x+1, xyz.y, xyz.z)] 
-        // var tLeftBottom = this.gridCache[this.createTileKey(xyz.x, xyz.y+1, xyz.z)]  
-        // var tRightBottom = this.gridCache[this.createTileKey(xyz.x+1, xyz.y+1, xyz.z)]  
-        // //设置图形顶点坐标
-        // var leftTop = mapboxgl.MercatorCoordinate.fromLngLat(tLeftTop);
-        // var rightTop = mapboxgl.MercatorCoordinate.fromLngLat(tRightTop);
-        // var leftBottom = mapboxgl.MercatorCoordinate.fromLngLat(tLeftBottom);
-        // var rightBottom = mapboxgl.MercatorCoordinate.fromLngLat(tRightBottom);
-        //顶点坐标+纹理坐标
-        // var attrData = new Float32Array([
-        //     leftTop.x, leftTop.y, 0.0, 1.0,
-        //     leftBottom.x, leftBottom.y, 0.0, 0.0,
-        //     rightTop.x, rightTop.y, 1.0, 1.0,
-        //     rightBottom.x, rightBottom.y, 1.0, 0.0
-        // ])
         
-        // //瓦片编号转经纬度，并进行偏移
+        //瓦片编号转经纬度，并进行偏移
         var leftTop = this.gridCache[this.createTileKey(xyz)]
         var rightTop = this.gridCache[this.createTileKey(xyz.x+1, xyz.y, xyz.z)] 
         var leftBottom = this.gridCache[this.createTileKey(xyz.x, xyz.y+1, xyz.z)]  
@@ -354,9 +336,8 @@ export default class gcj02TileLayer{
             gl.enableVertexAttribArray(this.a_Pos);
             gl.enableVertexAttribArray(this.a_TextCoord);
 
-            //给位置变换矩阵赋值
-            // gl.uniformMatrix4fv(gl.getUniformLocation(this.program, "u_matrix"), false, matrix);
-            this.frame(gl)
+            // 设置位置的顶点参数
+            this.setVertex(gl)
 
             //开启阿尔法混合，实现注记半透明效果
             gl.enable(gl.BLEND);
@@ -368,17 +349,20 @@ export default class gcj02TileLayer{
 
     }
 
-    frame(gl) {
+    // 设置位置的顶点参数
+    //参考：https://github.com/xiaoiver/custom-mapbox-layer/blob/master/src/layers/PointCloudLayer2.ts
+    setVertex(gl) {
         const currentZoomLevel = this.map.getZoom();
         const bearing = this.map.getBearing();
         const pitch = this.map.getPitch();
         const center = this.map.getCenter();
 
         const viewport = new WebMercatorViewport({
-            // width: gl.drawingBufferWidth / 2,
-            // height: gl.drawingBufferHeight / 2,
-            width: gl.drawingBufferWidth*1.11,
-            height: gl.drawingBufferHeight*1.11,
+            // width: gl.drawingBufferWidth*1.11,
+            // height: gl.drawingBufferHeight*1.11,
+            width: gl.drawingBufferWidth,
+            height: gl.drawingBufferHeight,
+
             longitude: center.lng,
             latitude: center.lat,
             zoom: currentZoomLevel,
@@ -403,8 +387,6 @@ export default class gcj02TileLayer{
         };
 
         if (currentZoomLevel > 12) {
-            // const newMatrix: Array<number> = [];
-
             const { pixelsPerDegree, pixelsPerDegree2 } = getDistanceScales({
                 longitude: center.lng,
                 latitude: center.lat,

@@ -1,3 +1,22 @@
 {
-    "liveServer.settings.port": 5502
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true,
+    "source.fixAll.eslint": true,
+    // For TSLint
+    "source.fixAll.tslint": true,
+    // For Stylelint
+    "source.fixAll.stylelint": true
+  },
+  //eslint 代码自动检查相关配置
+  "eslint.enable": true,
+  "eslint.run": "onType",
+  "eslint.options": {
+    "extensions": [
+      ".js"
+    ]
+  },
+  "eslint.validate": [
+    "javascript",
+    "html"
+  ]
 }
