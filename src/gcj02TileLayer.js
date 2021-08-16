@@ -17,7 +17,7 @@ export default class gcj02TileLayer{
 
         this.options = {
 
-            //服务器编号
+                //服务器编号
             subdomains: null,
 
             //在瓦片加载完成后，是否主动去更新渲染。
@@ -31,7 +31,7 @@ export default class gcj02TileLayer{
         }
         setOptions(this, options)   //合并属性
 
-        //着色器程序
+            //着色器程序 
         this.program;
 
         //存放当前显示的瓦片

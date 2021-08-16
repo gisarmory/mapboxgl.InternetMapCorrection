@@ -46,6 +46,10 @@
         // hash: true
     });
 
+    map.on('load',function(){
+        addGaodeMap()
+    })
+
     //高德矢量地图
     function addGaodeMap(){
         clearMap()

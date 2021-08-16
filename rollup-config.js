@@ -1,4 +1,3 @@
-// Config file for running Rollup in "normal" mode (non-watch)
 
 import rollupGitVersion from 'rollup-plugin-git-version'
 import json from 'rollup-plugin-json'
@@ -19,7 +18,7 @@ export default {
 	input: 'src/gcj02TileLayer.js',	// 入口文件
 	output: [
 		{
-			file: 'dist/gcj02TileLayer.js',	// 出口文件
+			file: 'dist/gcj02TileLayer-src.js',	// 出口文件
 			format: 'umd',	// 代码打包时的格式，这个格式可以前后端通用，除此之外还有其他格式：cjs，iife，es，amd, umd
 			name: 'gcj02TileLayer',	// 包的名字,
 			sourcemap: true
