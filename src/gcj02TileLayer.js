@@ -1,7 +1,7 @@
-import {lonLatToTileNumbers, tileNumbersToLonLat, gcj02_To_gps84, gps84_To_gcj02} from './lib/coordConver.js'
-import {setOptions, template} from './lib/Util.js'
+import {lonLatToTileNumbers, tileNumbersToLonLat, gcj02_To_gps84, gps84_To_gcj02} from './support/coordConver.js'
+import {setOptions, template} from './support/Util.js'
 import WebMercatorViewport from 'viewport-mercator-project';
-import { getDistanceScales, zoomToScale } from './lib/web-mercator.js';
+import { getDistanceScales, zoomToScale } from './support/web-mercator.js';
 
 import * as mat4 from 'gl-matrix/mat4';
 import * as vec4 from 'gl-matrix/vec4';
