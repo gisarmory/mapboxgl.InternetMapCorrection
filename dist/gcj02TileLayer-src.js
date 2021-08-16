@@ -1648,7 +1648,7 @@
 	            //如果是包含透明区域的瓦片，建议设置为false，如影像注记瓦片。
 	            //当瓦片因为网络原因，在render方法不再主动后，才加载完成，这时去主动调用render方法，
 	            //其中用于实现注记半透明效果的阿尔法混合会不起作用，瓦片透明区域会变成不透明的白色
-	            imgLoadRender: true,
+	            imgLoadRender: false,
 
 	            minZoom: 3,
 	            maxZoom: 18
