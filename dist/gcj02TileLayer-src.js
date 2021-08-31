@@ -1644,12 +1644,6 @@
 	            //服务器编号
 	            subdomains: null,
 
-	            //在瓦片加载完成后，是否主动去更新渲染。
-	            //如果是包含透明区域的瓦片，建议设置为false，如影像注记瓦片。
-	            //当瓦片因为网络原因，在render方法不再主动后，才加载完成，这时去主动调用render方法，
-	            //其中用于实现注记半透明效果的阿尔法混合会不起作用，瓦片透明区域会变成不透明的白色
-	            imgLoadRender: false,
-
 	            minZoom: 3,
 	            maxZoom: 18
 	        };
@@ -1838,10 +1832,7 @@
 
 	            tile.isLoad = true;
 
-	            //瓦片加载完成后主动绘制
-	            if (this.options.imgLoadRender) {
-	                this.render(gl, this.matrix);
-	            }
+	            this.map.triggerRepaint(); //主动让地图重绘
 	        };
 	        img.crossOrigin = true;
 	        img.src = _url;
