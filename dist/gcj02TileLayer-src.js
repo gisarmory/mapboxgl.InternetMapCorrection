@@ -1666,12 +1666,15 @@
 	        this.matrix;
 
 	        this.map;
+
+	        //记录当前图层是否在显示
+	        this.isLayerShow;
 	    }
 
 	    onAdd(map, gl) {
 	        this.map = map;
 
-	        // 参考：https://github.com/xiaoiver/custom-mapbox-layer/blob/master/src/shaders/project.glsl
+	        // 着色器程序参考：https://github.com/xiaoiver/custom-mapbox-layer/blob/master/src/shaders/project.glsl
 	        var vertexSource = "" + "uniform mat4 u_matrix;" + "attribute vec2 a_pos;" + "attribute vec2 a_TextCoord;" + "varying vec2 v_TextCoord;" + "const float TILE_SIZE = 512.0;" + "const float PI = 3.1415926536;" + "const float WORLD_SCALE = TILE_SIZE / (PI * 2.0);" + "uniform float u_project_scale;" + "uniform bool u_is_offset;" + "uniform vec3 u_pixels_per_degree;" + "uniform vec3 u_pixels_per_degree2;" + "uniform vec3 u_pixels_per_meter;" + "uniform vec2 u_viewport_center;" + "uniform vec4 u_viewport_center_projection;" + "uniform vec2 u_viewport_size;" + "float project_scale(float meters) {" + "    return meters * u_pixels_per_meter.z;" + "}" + "vec3 project_scale(vec3 position) {" + "    return position * u_pixels_per_meter;" + "}" + "vec2 project_mercator(vec2 lnglat) {" + "    float x = lnglat.x;" + "    return vec2(" + "    radians(x) + PI, PI - log(tan(PI * 0.25 + radians(lnglat.y) * 0.5))" + "    );" + "}" + "vec4 project_offset(vec4 offset) {" + "    float dy = offset.y;" + "    dy = clamp(dy, -1., 1.);" + "    vec3 pixels_per_unit = u_pixels_per_degree + u_pixels_per_degree2 * dy;" + "    return vec4(offset.xyz * pixels_per_unit, offset.w);" + "}" + "vec4 project_position(vec4 position) {" + "    if (u_is_offset) {" + "        float X = position.x - u_viewport_center.x;" + "        float Y = position.y - u_viewport_center.y;" + "        return project_offset(vec4(X, Y, position.z, position.w));" + "    }" + "    else {" + "        return vec4(" + "        project_mercator(position.xy) * WORLD_SCALE * u_project_scale, project_scale(position.z), position.w" + "        );" + "    }" + "}" + "vec4 project_to_clipping_space(vec3 position) {" + "    vec4 project_pos = project_position(vec4(position, 1.0));" + "    return u_matrix * project_pos + u_viewport_center_projection;" + "}" + "void main() {" + "   vec4 project_pos = project_position(vec4(a_pos, 0.0, 1.0));" + "   gl_Position = u_matrix * project_pos + u_viewport_center_projection;" + "   v_TextCoord = a_TextCoord;" + "}";
 
 	        var fragmentSource = "" + "precision mediump float;" + "uniform sampler2D u_Sampler; " + "varying vec2 v_TextCoord; " + "void main() {" + "   gl_FragColor = texture2D(u_Sampler, v_TextCoord);" +
@@ -1696,8 +1699,9 @@
 	        this.a_Pos = gl.getAttribLocation(this.program, "a_pos");
 	        this.a_TextCoord = gl.getAttribLocation(this.program, 'a_TextCoord');
 
+	        this.isLayerShow = true;
 	        map.on('move', () => {
-	            this.update(gl, map);
+	            if (this.isLayerShow) this.update(gl, map);
 	        });
 	        this.update(gl, map);
 	    }
@@ -1965,6 +1969,11 @@
 	        gl.uniform3fv(gl.getUniformLocation(this.program, "u_pixels_per_meter"), drawParams['u_pixels_per_meter']);
 	        gl.uniform2fv(gl.getUniformLocation(this.program, "u_viewport_center"), drawParams['u_viewport_center']);
 	        gl.uniform4fv(gl.getUniformLocation(this.program, "u_viewport_center_projection"), drawParams['u_viewport_center_projection']);
+	    }
+
+	    //当map移除当前图层时调用
+	    onRemove(map, gl) {
+	        this.isLayerShow = false;
 	    }
 
 	}

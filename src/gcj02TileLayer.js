@@ -43,13 +43,16 @@ export default class gcj02TileLayer{
 
         this.map;
 
+        //记录当前图层是否在显示
+        this.isLayerShow;
+
     }
 
 
     onAdd(map, gl) {
         this.map = map;
 
-        // 参考：https://github.com/xiaoiver/custom-mapbox-layer/blob/master/src/shaders/project.glsl
+        // 着色器程序参考：https://github.com/xiaoiver/custom-mapbox-layer/blob/master/src/shaders/project.glsl
         var vertexSource = "" +
             "uniform mat4 u_matrix;" +
             "attribute vec2 a_pos;" +
@@ -137,9 +140,8 @@ export default class gcj02TileLayer{
         this.a_TextCoord = gl.getAttribLocation(this.program, 'a_TextCoord');
 
 
-        map.on('move', ()=>{
-            this.update(gl, map)
-        })
+        this.isLayerShow = true;
+        map.on('move', ()=>{if(this.isLayerShow)this.update(gl, map)})
         this.update(gl, map)
     }
 
@@ -426,6 +428,11 @@ export default class gcj02TileLayer{
         gl.uniform2fv(gl.getUniformLocation(this.program, "u_viewport_center"), drawParams['u_viewport_center']);
         gl.uniform4fv(gl.getUniformLocation(this.program, "u_viewport_center_projection"), drawParams['u_viewport_center_projection']);
         
+    }
+
+    //当map移除当前图层时调用
+    onRemove(map, gl){
+        this.isLayerShow = false;
     }
 
 
