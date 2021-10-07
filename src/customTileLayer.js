@@ -9,7 +9,7 @@ import { getDistanceScales, zoomToScale } from './support/web-mercator.js';
 import * as mat4 from 'gl-matrix/mat4';
 import * as vec4 from 'gl-matrix/vec4';
 
-export default class gcj02TileLayer{
+export default class customTileLayer{
 
 
     constructor(layerId, url, options){
@@ -157,7 +157,7 @@ export default class gcj02TileLayer{
 
         var minTile,maxTile;
         if(this.options.tileType==='xyz'){
-            zoom = parseInt(map.getZoom()+1);   //解决瓦片上文字偏大的问题
+            zoom = parseInt(map.getZoom()+1.4);   //解决瓦片上文字偏大的问题
             //把当前显示范围做偏移，后面加载瓦片时会再偏移回来
             //如果不这样做的话，大比例尺时，瓦片偏移后，屏幕边缘会有空白区域
             var northWest = gps84_To_gcj02(bounds.getNorthWest())

@@ -137,7 +137,7 @@ export function setOptions(obj, options) {
 		obj.options = obj.options ? create(obj.options) : {};
 	}
 	for (var i in options) {
-		obj.options[i] = options[i];
+		obj.options[i] = options[i] || obj.options[i];
 	}
 	return obj.options;
 }

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8' />
+    <title>helloworld</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='lib/mapbox-gl.js'></script>
+    <link href='lib/mapbox-gl.css' rel='stylesheet' />
+    
+    <!-- <script src='../dist/rasterTileLayer-src.js'></script> -->
+    <script src='../dist/rasterTileLayer.js'></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 30px;
+            bottom: 0px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='map'></div>
+    <input type="button" value="百度地图" onclick="bdsl()" />
+    <input type="button" value="百度影像" onclick="bdyx()" />
+    <input type="button" value="高德地图" onclick="gdsl()" />
+    <input type="button" value="高德影像" onclick="gdyx()" />
+    <input type="button" value="天地图"     onclick="tdtsl()" />
+    <input type="button" value="天地图影像" onclick="tdtyx()" />
+    <input type="button" value="OSM地图" onclick="osm()" />
+    <input type="button" value="GEOQ浅色地图" onclick="geoqGray()" />
+    <input type="button" value="GEOQ深色地图" onclick="geoqPurplishBlue()" />
+</body>
+
+<script>
+    var map = new mapboxgl.Map({
+        container: 'map', 
+        style:  {
+            "version": 8,
+            layers:[],
+            sources:{}
+        },
+        center: [116.39104,39.90502], 
+        zoom: 15,
+        hash: true
+    });
+
+    map.on('load',()=>{
+        bdsl()
+    })
+
+    //天地图普通地图
+    function tdtsl(){
+        addRasterTileLayer([
+            ['tdtsl', 'TianDiTu.Normal.Map'],
+            ['tdtslzj', 'TianDiTu.Normal.Annotion']
+        ],'fb258b4c0bbf60ff7a0205b519ad9a96')
+    }
+    //天地图影像
+    function tdtyx(){
+        addRasterTileLayer([
+            ['tdtyx', 'TianDiTu.Satellite.Map'],
+            ['tdtyxzj', 'TianDiTu.Satellite.Annotion']
+        ],'fb258b4c0bbf60ff7a0205b519ad9a96')
+    }
+    //天地图地形
+    function tdtdx(){
+        addRasterTileLayer([
+            ['tdtdx', 'TianDiTu.Terrain.Map'],
+            ['tdtdxzj', 'TianDiTu.Terrain.Annotion']
+        ],'fb258b4c0bbf60ff7a0205b519ad9a96')
+    }
+
+    //高德矢量
+    function gdsl(){
+        addRasterTileLayer([
+            ['gdsl', 'GaoDe.Normal.Map']
+        ])
+    }
+    //高德矢量,无注记版
+    function gdslwzj(){
+        addRasterTileLayer([
+            ['gdslwzj', 'GaoDe.Normal_NoTag.Map']
+        ])
+    }
+    //高德影像
+    function gdyx(){
+        addRasterTileLayer([
+            ['gdyx','GaoDe.Satellite.Map'],
+            // ['gdyxzj', 'GaoDe.Satellite.Annotion']
+        ])
+    }
+    
+    //百度矢量
+    function bdsl(){
+        addRasterTileLayer([
+            ['bdsl','Baidu.Normal.Map']
+        ])
+    }
+    //百度影像
+    function bdyx(){
+        addRasterTileLayer([
+            ['bdyx','Baidu.Satellite.Map'],
+            ['bdyxzj', 'Baidu.Satellite.Annotion']
+        ])
+    }
+
+    //OSM地图
+    function osm(){
+        addRasterTileLayer([
+            ['osm', 'OSM.Normal.Map']
+        ])
+    }
+
+    //GeoQ普通地图
+    function geoq(){
+        addRasterTileLayer([
+            ['geoq', 'Geoq.Normal.Map']
+        ])
+    }
+    //GeoQ深蓝色地图
+    function geoqPurplishBlue(){
+        addRasterTileLayer([
+            ['geoqPurplishBlue', 'Geoq.Normal.PurplishBlue']
+        ])
+    }
+    //GeoQ浅色地图
+    function geoqGray(){
+        addRasterTileLayer([
+            ['geoqGray', 'Geoq.Normal.Gray']
+        ])
+    }
+    //GeoQ暖色调地图
+    function geoqWarm(){
+        addRasterTileLayer([
+            ['geoqWarm', 'Geoq.Normal.Warm']
+        ])
+    }
+    //GeoQ冷色调地图
+    function geoqCold(){
+        addRasterTileLayer([
+            ['geoqCold', 'Geoq.Normal.Cold']
+        ])
+    }
+
+    
+    var loadLayer=[]
+    function addRasterTileLayer(layerList, key){
+        loadLayer.forEach(function(layerId){
+             //删除已经加载的图层
+            if(map.getLayer(layerId)){
+                map.removeLayer(layerId)
+            }
+            //删除已加载的数据源
+            //天地图和OSM地图走的是mapboxgl的原生接口，在添加图层时会默认添加一个同名数据源，在删除图层时需要同时删除数据源
+            //百度、高德、geoq地图走的是自定义图层，不会添加同名数据源
+            if(map.getSource(layerId)){
+                map.removeSource(layerId)
+            }
+        })
+        loadLayer = []
+        layerList.forEach(function(layer){
+            loadLayer.push(layer[0])
+            //调用接口，添加图层
+            var param = key?{key:key}:null
+            map.addLayer(rasterTileLayer(layer[0], layer[1], param));
+        })
+    }
+
+
+    //参照点，wgs84坐标下的天安门广场国旗位置
+    var marker = new mapboxgl.Marker()
+        .setLngLat([116.391305, 39.905530])
+        .addTo(map);
+
+</script>
+
+</html>

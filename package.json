@@ -1,6 +1,6 @@
 {
   "name": "mapboxgl.internetmapcorrection",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "mapboxgl插件，纠偏互联网地图栅格瓦片",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^20.0.0",
@@ -15,7 +15,7 @@
   },
   "scripts": {
     "dev": "rollup -w -c rollup-config.js",
-    "build": "rollup -c rollup-config.js && uglifyjs dist/gcj02TileLayer-src.js -c -m -o dist/gcj02TileLayer.js"
+    "build": "rollup -c rollup-config.js && uglifyjs dist/rasterTileLayer-src.js -c -m -o dist/rasterTileLayer.js"
   },
   "dependencies": {
     "viewport-mercator-project": "^6.1.1",
