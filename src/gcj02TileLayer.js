@@ -1,4 +1,7 @@
-import {lonLatToTileNumbers, tileNumbersToLonLat, gcj02_To_gps84, gps84_To_gcj02} from './support/coordConver.js'
+import {lonLatToTileNumbers, tileNumbersToLonLat, 
+    gcj02_To_gps84, gps84_To_gcj02, 
+    bd09_To_gps84, gps84_To_bd09} from './support/coordConver.js'
+import TransformClassBaidu from './support/transform-class-baidu'
 import {setOptions, template} from './support/Util.js'
 import WebMercatorViewport from 'viewport-mercator-project';
 import { getDistanceScales, zoomToScale } from './support/web-mercator.js';
@@ -21,7 +24,8 @@ export default class gcj02TileLayer{
             subdomains: null,
 
             minZoom:3,
-            maxZoom:18
+            maxZoom:18,
+            tileType:'xyz'   //bd09,xyz
         }
         setOptions(this, options)   //合并属性
 
@@ -46,6 +50,7 @@ export default class gcj02TileLayer{
         //记录当前图层是否在显示
         this.isLayerShow;
 
+        this.transformBaidu = new TransformClassBaidu()
     }
 
 
@@ -147,17 +152,26 @@ export default class gcj02TileLayer{
 
     update(gl, map){
         var center = map.getCenter();
-        var zoom = parseInt(map.getZoom())+1;
+        var zoom;
         var bounds = map.getBounds();
 
-        //把当前显示范围做偏移，后面加载瓦片时会再偏移回来
-        //如果不这样做的话，大比例尺时，瓦片偏移后，屏幕边缘会有空白区域
-        var northWest = gps84_To_gcj02(bounds.getNorthWest())
-        var southEast = gps84_To_gcj02(bounds.getSouthEast())
-
-        //算出当前范围的瓦片编号
-        var minTile = lonLatToTileNumbers(northWest.lng, northWest.lat, zoom)
-        var maxTile = lonLatToTileNumbers(southEast.lng, southEast.lat, zoom)
+        var minTile,maxTile;
+        if(this.options.tileType==='xyz'){
+            zoom = parseInt(map.getZoom()+1);   //解决瓦片上文字偏大的问题
+            //把当前显示范围做偏移，后面加载瓦片时会再偏移回来
+            //如果不这样做的话，大比例尺时，瓦片偏移后，屏幕边缘会有空白区域
+            var northWest = gps84_To_gcj02(bounds.getNorthWest())
+            var southEast = gps84_To_gcj02(bounds.getSouthEast())
+            //算出当前范围的瓦片编号
+            minTile = lonLatToTileNumbers(northWest.lng, northWest.lat, zoom)
+            maxTile = lonLatToTileNumbers(southEast.lng, southEast.lat, zoom)
+        }else if(this.options.tileType==='bd09'){
+            zoom = parseInt(map.getZoom()+1.8); //解决瓦片上文字偏大的问题
+            var southWest = gps84_To_bd09(bounds.getSouthWest())
+            var northEast = gps84_To_bd09(bounds.getNorthEast())
+            minTile = this.transformBaidu.lnglatToTile(southWest.lng, southWest.lat, zoom)
+            maxTile = this.transformBaidu.lnglatToTile(northEast.lng, northEast.lat, zoom)
+        }
         var currentTiles = [];
         for(var x=minTile[0]; x<=maxTile[0]; x++){
             for(var y=minTile[1]; y<=maxTile[1]; y++){
@@ -167,7 +181,7 @@ export default class gcj02TileLayer{
                     z:zoom
                 }
                 currentTiles.push(xyz)
-               
+                
                 //把瓦片号对应的经纬度缓存起来，
                 //存起来是因为贴纹理时需要瓦片4个角的经纬度，这样可以避免重复计算
                 //行和列向外多计算一个瓦片数，这样保证瓦片4个角都有经纬度可以取到
@@ -179,7 +193,8 @@ export default class gcj02TileLayer{
         }
 
         //瓦片设置为从中间向周边的排序
-        var centerTile = lonLatToTileNumbers(center.lng, center.lat, zoom)  //计算中心点所在的瓦片号
+        if(this.options.tileType === 'xyz') var centerTile = lonLatToTileNumbers(center.lng, center.lat, zoom)  //计算中心点所在的瓦片号
+        else if(this.options.tileType === 'bd09') centerTile = this.transformBaidu.lnglatToTile(center.lng, center.lat, zoom)
         currentTiles.sort((a, b)=>{
 			return this.tileDistance(a, centerTile) - this.tileDistance(b, centerTile);
 		});
@@ -202,7 +217,8 @@ export default class gcj02TileLayer{
     addGridCache(xyz, xPlus, yPlus){
         var key = this.createTileKey(xyz.x+xPlus, xyz.y+yPlus, xyz.z)
         if(!this.gridCache[key]){
-            this.gridCache[key] = gcj02_To_gps84(tileNumbersToLonLat(xyz.x+xPlus, xyz.y+yPlus, xyz.z))
+            if(this.options.tileType === 'xyz') this.gridCache[key] = gcj02_To_gps84(tileNumbersToLonLat(xyz.x+xPlus, xyz.y+yPlus, xyz.z))
+            else if(this.options.tileType === 'bd09') this.gridCache[key] = bd09_To_gps84(this.transformBaidu.pixelToLnglat(0, 0, xyz.x+xPlus, xyz.y+yPlus, xyz.z))
         }
     }
 
@@ -238,10 +254,18 @@ export default class gcj02TileLayer{
 
         
         //瓦片编号转经纬度，并进行偏移
-        var leftTop = this.gridCache[this.createTileKey(xyz)]
-        var rightTop = this.gridCache[this.createTileKey(xyz.x+1, xyz.y, xyz.z)] 
-        var leftBottom = this.gridCache[this.createTileKey(xyz.x, xyz.y+1, xyz.z)]  
-        var rightBottom = this.gridCache[this.createTileKey(xyz.x+1, xyz.y+1, xyz.z)]  
+        var leftTop,rightTop,leftBottom,rightBottom;
+        if(this.options.tileType === 'xyz'){
+            leftTop = this.gridCache[this.createTileKey(xyz)]
+            rightTop = this.gridCache[this.createTileKey(xyz.x+1, xyz.y, xyz.z)] 
+            leftBottom = this.gridCache[this.createTileKey(xyz.x, xyz.y+1, xyz.z)]  
+            rightBottom = this.gridCache[this.createTileKey(xyz.x+1, xyz.y+1, xyz.z)]  
+        }else if(this.options.tileType === 'bd09'){
+            leftTop = this.gridCache[this.createTileKey(xyz.x, xyz.y+1, xyz.z)]
+            rightTop = this.gridCache[this.createTileKey(xyz.x+1, xyz.y+1, xyz.z)] 
+            leftBottom = this.gridCache[this.createTileKey(xyz)]  
+            rightBottom = this.gridCache[this.createTileKey(xyz.x+1, xyz.y, xyz.z)] 
+        }
 
         //顶点坐标+纹理坐标
         var attrData = new Float32Array([
@@ -250,6 +274,12 @@ export default class gcj02TileLayer{
             rightTop.lng, rightTop.lat, 1.0, 1.0,
             rightBottom.lng, rightBottom.lat, 1.0, 0.0
         ])
+        // var attrData = new Float32Array([
+        //     116.38967958133532, 39.90811009556515, 0.0, 1.0,
+        //     116.38967958133532, 39.90294980726742, 0.0, 0.0,
+        //     116.39486013141436, 39.90811009556515, 1.0, 1.0,
+        //     116.39486013141436, 39.90294980726742, 1.0, 0.0
+        // ])
         var FSIZE = attrData.BYTES_PER_ELEMENT;
         //创建缓冲区并传入数据
         var buffer = gl.createBuffer();

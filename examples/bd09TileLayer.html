@@ -34,70 +34,34 @@
 
 <body>
     <div id='map'></div>
-    <input type="button" value="百度示例" onclick="baiduMap()" />
-    <input type="button" value="高德矢量" onclick="addGaodeMap()" />
-    <input type="button" value="高德影像" onclick="addGaodeYX()" />
+    <input type="button" value="百度地图" onclick="baiduMap()" />
     <input type="button" value="mapbox地图" onclick="clearMap()" />
 </body>
 
 <script >
 
-    // mapboxgl.accessToken ='pk.eyJ1IjoiZXRlcm5pdHkteHlmIiwiYSI6ImNqaDFsdXIxdTA1ODgycXJ5czdjNmF0ZTkifQ.zN7e588TqZOQMWfws-K0Yw';
+    mapboxgl.accessToken ='pk.eyJ1IjoiZXRlcm5pdHkteHlmIiwiYSI6ImNqaDFsdXIxdTA1ODgycXJ5czdjNmF0ZTkifQ.zN7e588TqZOQMWfws-K0Yw';
     var map = new mapboxgl.Map({
         container: 'map', 
-        style: {
-            "version": 8,
-            layers:[],
-            sources:{}
-        }, 
+        style: 'mapbox://styles/mapbox/streets-v11', 
         center: [116.391305, 39.905530], 
         zoom: 16,
-        hash: true
+        // hash: true
     });
 
     map.on('load',function(){
-        addGaodeMap()
+        baiduMap()
     })
 
-    //百度地图
+    //高德矢量地图
     function baiduMap(){
         clearMap()
         var baiduMap = new gcj02TileLayer('baiduLayer',"//online{s}.map.bdimg.com/onlinelabel/?qt=tile&x={x}&y={y}&z={z}&styles=pl&scaler=1&p=1",{
             subdomains:["0","1","2","3","4","5","6","7","8","9"],
             minzoom:3,
-            maxzoom:18,
-            tileType:'bd09'
+            maxzoom:18
         });
         map.addLayer(baiduMap)
-    }
-
-    //高德矢量地图
-    function addGaodeMap(){
-        clearMap()
-        var gaodeMap = new gcj02TileLayer('gaodeLayer',"http://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}",{
-            subdomains:["1","2","3","4"],
-            minzoom:3,
-            maxzoom:18
-        });
-        map.addLayer(gaodeMap)
-    }
-
-    function addGaodeYX(){
-        clearMap()
-        //高德影像(无注记)
-        var gaodeYX = new gcj02TileLayer('gaodeYX',"http://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}",{
-            subdomains:["1","2","3","4"],
-            minzoom:3,
-            maxzoom:18
-        });
-        map.addLayer(gaodeYX)
-        //高德影像注记
-        var gaodeYXZJ = new gcj02TileLayer('gaodeYXZJ',"http://webst0{s}.is.autonavi.com/appmaptile?style=8&x={x}&y={y}&z={z}",{
-            subdomains:["1","2","3","4"],
-            minzoom:3,
-            maxzoom:18
-        });
-        map.addLayer(gaodeYXZJ)
     }
 
     //参照点，wgs84坐标下的天安门广场国旗位置
@@ -107,9 +71,6 @@
 
     function clearMap(){
         removeLayer('baiduLayer')
-        removeLayer('gaodeLayer')
-        removeLayer('gaodeYX')
-        removeLayer('gaodeYXZJ')
     }
     function removeLayer(layerId){
         if(map.getLayer(layerId)){

@@ -28,14 +28,34 @@ export function tileNumbersToLonLat(xtile, ytile, zoom) {
 
 /**百度转84*/
 export function bd09_To_gps84(lng, lat) {
-    var gcj02 = this.bd09_To_gcj02(lng, lat);
-    var map84 = this.gcj02_To_gps84(gcj02.lng, gcj02.lat);
+    if(isArray(lng)){
+        var _lng = lng[0]
+        lat = lng[1]
+        lng = _lng
+    }
+    if(lng instanceof Object){
+        var _lng = lng.lng
+        lat = lng.lat
+        lng = _lng
+    }
+    var gcj02 = bd09_To_gcj02(lng, lat);
+    var map84 = gcj02_To_gps84(gcj02.lng, gcj02.lat);
     return map84;
 }
 /**84转百度*/
 export function gps84_To_bd09(lng, lat) {
-    var gcj02 = this.gps84_To_gcj02(lng, lat);
-    var bd09 = this.gcj02_To_bd09(gcj02.lng, gcj02.lat);
+    if(isArray(lng)){
+        var _lng = lng[0]
+        lat = lng[1]
+        lng = _lng
+    }
+    if(lng instanceof Object){
+        var _lng = lng.lng
+        lat = lng.lat
+        lng = _lng
+    }
+    var gcj02 = gps84_To_gcj02(lng, lat);
+    var bd09 = gcj02_To_bd09(gcj02.lng, gcj02.lat);
     return bd09;
 }
 /**84转火星*/
