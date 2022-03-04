@@ -44,7 +44,7 @@ export function getDistanceScales(options){
   scale = scale !== undefined ? scale : zoomToScale(zoom);
 
   const result = {};
-  const worldSize = TILE_SIZE * scale;
+  const worldSize = TILE_SIZE * scale * window.devicePixelRatio;
   const latCosine = Math.cos(latitude * DEGREES_TO_RADIANS);
 
   /**
